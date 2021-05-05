@@ -957,8 +957,8 @@ function Tick()
   object8z = (-68)*Math.sin(angle8*Math.PI/180);
   object9x = (-76)*Math.cos(angle9*Math.PI/180)-35;
   object9z = (-76)*Math.sin(angle9*Math.PI/180);
-  object10x = (-37)*Math.cos(angle10*Math.PI/180)-35;
-  object10z = (-37)*Math.sin(angle10*Math.PI/180);
+  object10x = ((-2)*Math.cos(angle10*Math.PI/180)+object4x);
+  object10z = ((-2)*Math.sin(angle10*Math.PI/180)+object4z);
   setTimeout(Tick,10);
 }
 function handlekeydown(e)
