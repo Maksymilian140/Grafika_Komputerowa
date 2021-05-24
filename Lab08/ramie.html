@@ -271,6 +271,7 @@ function startGL()
   Tick();
 } 
 //let angle = 45.0; //Macierz transformacji świata - określenie położenia kamery 
+var push = 0.0;
 var angleZ = 0.0;
 var angleY = 0.0;
 var angleX = 0.0;
@@ -393,8 +394,12 @@ function Tick()
   gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uInvMMatrix"), false, new Float32Array(MatrixTransposeInverse(uMMatrix0)));
   gl.uniform1f(gl.getUniformLocation(shaderProgram, "uNormalMul"),-1.0);  
   gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
+
+  Object1PositionX = Object1PositionX + push;
+
+  push = push + 0.1;
   
-  setTimeout(Tick,100);
+  setTimeout(Tick,10);
 }
 function handlekeydown(e)
 {
