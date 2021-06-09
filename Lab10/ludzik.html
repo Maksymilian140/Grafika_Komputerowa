@@ -1,1158 +1,576 @@
-<html>
-<head>;
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />;
-<script type="text/javascript">;
-var gl;
-var shaderProgram;
-var uPMatrix;
-var vertexPositionBuffer;
-var vertexColorBuffer;
-var vertexCoordsBuffer;
-var vertexNormalBuffer;
-var indexBuffer;
 
-function MatrixMul(a,b) //Mnożenie macierzy
-{
-  let c = [
-  0,0,0,0,
-  0,0,0,0,
-  0,0,0,0,
-  0,0,0,0
-  ]
-  for(let i=0;i<4;i++)
+<html>
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <script type="text/javascript">
+  var shaderProgram;
+  var uPMatrix;
+  var vertexPositionBuffer;
+  var vertexColorBuffer;
+  var vertexCoordsBuffer;
+  var vertexNormalBuffer;
+  var indexBuffer;
+  
+  function MatrixMul(a,b) //Mnożenie macierzy
   {
-    for(let j=0;j<4;j++)
+    let c = [
+    0,0,0,0,
+    0,0,0,0,
+    0,0,0,0,
+    0,0,0,0
+    ]
+    for(let i=0;i<4;i++)
     {
-      c[i*4+j] = 0.0;
-      for(let k=0;k<4;k++)
+      for(let j=0;j<4;j++)
       {
-        c[i*4+j]+= a[i*4+k] * b[k*4+j];
+        c[i*4+j] = 0.0;
+        for(let k=0;k<4;k++)
+        {
+          c[i*4+j]+= a[i*4+k] * b[k*4+j];
+        }
       }
     }
+    return c;
   }
-  return c;
-}
-
-function MatrixTransposeInverse(m)
-{
-  let r = [
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0
+  
+  function MatrixTransposeInverse(m)
+  {
+    let r = [
+          0, 0, 0, 0,
+          0, 0, 0, 0,
+          0, 0, 0, 0,
+          0, 0, 0, 0
+      ];
+    r[0] = m[5]*m[10]*m[15] - m[5]*m[14]*m[11] - m[6]*m[9]*m[15] + m[6]*m[13]*m[11] + m[7]*m[9]*m[14] - m[7]*m[13]*m[10];
+    r[1] = -m[1]*m[10]*m[15] + m[1]*m[14]*m[11] + m[2]*m[9]*m[15] - m[2]*m[13]*m[11] - m[3]*m[9]*m[14] + m[3]*m[13]*m[10];
+    r[2] = m[1]*m[6]*m[15] - m[1]*m[14]*m[7] - m[2]*m[5]*m[15] + m[2]*m[13]*m[7] + m[3]*m[5]*m[14] - m[3]*m[13]*m[6];
+    r[3] = -m[1]*m[6]*m[11] + m[1]*m[10]*m[7] + m[2]*m[5]*m[11] - m[2]*m[9]*m[7] - m[3]*m[5]*m[10] + m[3]*m[9]*m[6];
+  
+    r[4] = -m[4]*m[10]*m[15] + m[4]*m[14]*m[11] + m[6]*m[8]*m[15] - m[6]*m[12]*m[11] - m[7]*m[8]*m[14] + m[7]*m[12]*m[10];
+    r[5] = m[0]*m[10]*m[15] - m[0]*m[14]*m[11] - m[2]*m[8]*m[15] + m[2]*m[12]*m[11] + m[3]*m[8]*m[14] - m[3]*m[12]*m[10];
+    r[6] = -m[0]*m[6]*m[15] + m[0]*m[14]*m[7] + m[2]*m[4]*m[15] - m[2]*m[12]*m[7] - m[3]*m[4]*m[14] + m[3]*m[12]*m[6];
+    r[7] = m[0]*m[6]*m[11] - m[0]*m[10]*m[7] - m[2]*m[4]*m[11] + m[2]*m[8]*m[7] + m[3]*m[4]*m[10] - m[3]*m[8]*m[6];
+  
+    r[8] = m[4]*m[9]*m[15] - m[4]*m[13]*m[11] - m[5]*m[8]*m[15] + m[5]*m[12]*m[11] + m[7]*m[8]*m[13] - m[7]*m[12]*m[9];
+    r[9] = -m[0]*m[9]*m[15] + m[0]*m[13]*m[11] + m[1]*m[8]*m[15] - m[1]*m[12]*m[11] - m[3]*m[8]*m[13] + m[3]*m[12]*m[9];
+    r[10] = m[0]*m[5]*m[15] - m[0]*m[13]*m[7] - m[1]*m[4]*m[15] + m[1]*m[12]*m[7] + m[3]*m[4]*m[13] - m[3]*m[12]*m[5];
+    r[11] = -m[0]*m[5]*m[11] + m[0]*m[9]*m[7] + m[1]*m[4]*m[11] - m[1]*m[8]*m[7] - m[3]*m[4]*m[9] + m[3]*m[8]*m[5];
+  
+    r[12] = -m[4]*m[9]*m[14] + m[4]*m[13]*m[10] + m[5]*m[8]*m[14] - m[5]*m[12]*m[10] - m[6]*m[8]*m[13] + m[6]*m[12]*m[9];
+    r[13] = m[0]*m[9]*m[14] - m[0]*m[13]*m[10] - m[1]*m[8]*m[14] + m[1]*m[12]*m[10] + m[2]*m[8]*m[13] - m[2]*m[12]*m[9];
+    r[14] = -m[0]*m[5]*m[14] + m[0]*m[13]*m[6] + m[1]*m[4]*m[14] - m[1]*m[12]*m[6] - m[2]*m[4]*m[13] + m[2]*m[12]*m[5];
+    r[15] = m[0]*m[5]*m[10] - m[0]*m[9]*m[6] - m[1]*m[4]*m[10] + m[1]*m[8]*m[6] + m[2]*m[4]*m[9] - m[2]*m[8]*m[5];
+  
+    var det = m[0]*r[0] + m[1]*r[4] + m[2]*r[8] + m[3]*r[12];
+    for (var i = 0; i < 16; i++) r[i] /= det;
+    
+    let rt = [ r[0], r[4], r[8], r[12],
+               r[1], r[5], r[9], r[13],
+               r[2], r[6], r[10], r[14],
+               r[3], r[7], r[11], r[15]
+               ];
+    
+    return rt;
+  }
+  
+  function CreateIdentytyMatrix()
+  {
+    return [
+    1,0,0,0, //Macierz jednostkowa
+    0,1,0,0,
+    0,0,1,0,
+    0,0,0,1
     ];
-  r[0] = m[5]*m[10]*m[15] - m[5]*m[14]*m[11] - m[6]*m[9]*m[15] + m[6]*m[13]*m[11] + m[7]*m[9]*m[14] - m[7]*m[13]*m[10];
-  r[1] = -m[1]*m[10]*m[15] + m[1]*m[14]*m[11] + m[2]*m[9]*m[15] - m[2]*m[13]*m[11] - m[3]*m[9]*m[14] + m[3]*m[13]*m[10];
-  r[2] = m[1]*m[6]*m[15] - m[1]*m[14]*m[7] - m[2]*m[5]*m[15] + m[2]*m[13]*m[7] + m[3]*m[5]*m[14] - m[3]*m[13]*m[6];
-  r[3] = -m[1]*m[6]*m[11] + m[1]*m[10]*m[7] + m[2]*m[5]*m[11] - m[2]*m[9]*m[7] - m[3]*m[5]*m[10] + m[3]*m[9]*m[6];
-
-  r[4] = -m[4]*m[10]*m[15] + m[4]*m[14]*m[11] + m[6]*m[8]*m[15] - m[6]*m[12]*m[11] - m[7]*m[8]*m[14] + m[7]*m[12]*m[10];
-  r[5] = m[0]*m[10]*m[15] - m[0]*m[14]*m[11] - m[2]*m[8]*m[15] + m[2]*m[12]*m[11] + m[3]*m[8]*m[14] - m[3]*m[12]*m[10];
-  r[6] = -m[0]*m[6]*m[15] + m[0]*m[14]*m[7] + m[2]*m[4]*m[15] - m[2]*m[12]*m[7] - m[3]*m[4]*m[14] + m[3]*m[12]*m[6];
-  r[7] = m[0]*m[6]*m[11] - m[0]*m[10]*m[7] - m[2]*m[4]*m[11] + m[2]*m[8]*m[7] + m[3]*m[4]*m[10] - m[3]*m[8]*m[6];
-
-  r[8] = m[4]*m[9]*m[15] - m[4]*m[13]*m[11] - m[5]*m[8]*m[15] + m[5]*m[12]*m[11] + m[7]*m[8]*m[13] - m[7]*m[12]*m[9];
-  r[9] = -m[0]*m[9]*m[15] + m[0]*m[13]*m[11] + m[1]*m[8]*m[15] - m[1]*m[12]*m[11] - m[3]*m[8]*m[13] + m[3]*m[12]*m[9];
-  r[10] = m[0]*m[5]*m[15] - m[0]*m[13]*m[7] - m[1]*m[4]*m[15] + m[1]*m[12]*m[7] + m[3]*m[4]*m[13] - m[3]*m[12]*m[5];
-  r[11] = -m[0]*m[5]*m[11] + m[0]*m[9]*m[7] + m[1]*m[4]*m[11] - m[1]*m[8]*m[7] - m[3]*m[4]*m[9] + m[3]*m[8]*m[5];
-
-  r[12] = -m[4]*m[9]*m[14] + m[4]*m[13]*m[10] + m[5]*m[8]*m[14] - m[5]*m[12]*m[10] - m[6]*m[8]*m[13] + m[6]*m[12]*m[9];
-  r[13] = m[0]*m[9]*m[14] - m[0]*m[13]*m[10] - m[1]*m[8]*m[14] + m[1]*m[12]*m[10] + m[2]*m[8]*m[13] - m[2]*m[12]*m[9];
-  r[14] = -m[0]*m[5]*m[14] + m[0]*m[13]*m[6] + m[1]*m[4]*m[14] - m[1]*m[12]*m[6] - m[2]*m[4]*m[13] + m[2]*m[12]*m[5];
-  r[15] = m[0]*m[5]*m[10] - m[0]*m[9]*m[6] - m[1]*m[4]*m[10] + m[1]*m[8]*m[6] + m[2]*m[4]*m[9] - m[2]*m[8]*m[5];
-
-  var det = m[0]*r[0] + m[1]*r[4] + m[2]*r[8] + m[3]*r[12];
-  for (var i = 0; i < 16; i++) r[i] /= det;
+  }
   
-  let rt = [ r[0], r[4], r[8], r[12],
-             r[1], r[5], r[9], r[13],
-             r[2], r[6], r[10], r[14],
-             r[3], r[7], r[11], r[15]
-             ];
+  function CreateTranslationMatrix(tx,ty,tz)
+  {
+    return  [
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,0,
+    tx,ty,tz,1
+    ];
+  }
   
-  return rt;
-}
-
-function CreateIdentytyMatrix()
-{
-  return [
-  1,0,0,0, //Macierz jednostkowa
-  0,1,0,0,
-  0,0,1,0,
-  0,0,0,1
-  ];
-}
-
-function CreateTranslationMatrix(tx,ty,tz)
-{
-  return  [
-  1,0,0,0,
-  0,1,0,0,
-  0,0,1,0,
-  tx,ty,tz,1
-  ];
-}
-
-function CreateScaleMatrix(sx,sy,sz)
-{
-  return [
-  sx,0,0,0,
-  0,sy,0,0,
-  0,0,sz,0,
-  0,0,0,1
-  ];
-}
-
-function CreateRotationZMatrix(angleZ)
-{
-  return [
-  +Math.cos(angleZ*Math.PI/180.0),+Math.sin(angleZ*Math.PI/180.0),0,0,
-  -Math.sin(angleZ*Math.PI/180.0),+Math.cos(angleZ*Math.PI/180.0),0,0,
-  0,0,1,0,
-  0,0,0,1
-  ];
-}
-
-function CreateRotationYMatrix(angleY)
-{
-  return [
-  +Math.cos(angleY*Math.PI/180.0),0,-Math.sin(angleY*Math.PI/180.0),0,
-  0,1,0,0,
-  +Math.sin(angleY*Math.PI/180.0),0,+Math.cos(angleY*Math.PI/180.0),0,
-  0,0,0,1
-  ];
-}
-
-function CreateRotationXMatrix(angleX)
-{
-  return [
-  1,0,0,0,
-  0,+Math.cos(angleX*Math.PI/180.0),+Math.sin(angleX*Math.PI/180.0),0,
-  0,-Math.sin(angleX*Math.PI/180.0),+Math.cos(angleX*Math.PI/180.0),0,
-  0,0,0,1
-  ];
-}
-
-function createRect(mx,my,mz,dax,day,daz,dbx,dby,dbz)
-{
-  p1x = mx;             p1y = my;             p1z = mz;
-  p2x = mx + dax;       p2y = my + day;       p2z = mz + daz;
-  p3x = mx + dbx;       p3y = my + dby;       p3z = mz + dbz;
-  p4x = mx + dax + dbx; p4y = my + day + dby; p4z = mz + daz + dbz;
+  function CreateScaleMatrix(sx,sy,sz)
+  {
+    return [
+    sx,0,0,0,
+    0,sy,0,0,
+    0,0,sz,0,
+    0,0,0,1
+    ];
+  }
   
-  let vertexPosition = [p1x,p1y,p1z, p2x,p2y,p2z, p4x,p4y,p4z,  //Pierwszy trójkąt
-                        p1x,p1y,p1z, p4x,p4y,p4z, p3x,p3y,p3z]; //Drugi trójkąt
-                        
-  return vertexPosition;
-}
-
-function createNormal(p1x,p1y,p1z,p2x,p2y,p2z,p3x,p3y,p3z) //Wyznaczenie wektora normalnego dla trójkąta
-{
-  let v1x = p2x - p1x;
-  let v1y = p2y - p1y;
-  let v1z = p2z - p1z;
+  function CreateRotationZMatrix(angleZ)
+  {
+    return [
+    +Math.cos(angleZ*Math.PI/180.0),+Math.sin(angleZ*Math.PI/180.0),0,0,
+    -Math.sin(angleZ*Math.PI/180.0),+Math.cos(angleZ*Math.PI/180.0),0,0,
+    0,0,1,0,
+    0,0,0,1
+    ];
+  }
   
-  let v2x = p3x - p1x;
-  let v2y = p3y - p1y;
-  let v2z = p3z - p1z;
+  function CreateRotationYMatrix(angleY)
+  {
+    return [
+    +Math.cos(angleY*Math.PI/180.0),0,-Math.sin(angleY*Math.PI/180.0),0,
+    0,1,0,0,
+    +Math.sin(angleY*Math.PI/180.0),0,+Math.cos(angleY*Math.PI/180.0),0,
+    0,0,0,1
+    ];
+  }
   
-  let v3x =  v1y*v2z - v1z*v2y;
-  let v3y =  v1z*v2x - v1x*v2z;
-  let v3z =  v1x*v2y - v1y*v2x;
+  function CreateRotationXMatrix(angleX)
+  {
+    return [
+    1,0,0,0,
+    0,+Math.cos(angleX*Math.PI/180.0),+Math.sin(angleX*Math.PI/180.0),0,
+    0,-Math.sin(angleX*Math.PI/180.0),+Math.cos(angleX*Math.PI/180.0),0,
+    0,0,0,1
+    ];
+  }
   
-  vl = Math.sqrt(v3x*v3x+v3y*v3y+v3z*v3z); //Obliczenie długości wektora
+  function createRect(mx,my,mz,dax,day,daz,dbx,dby,dbz)
+  {
+    p1x = mx;             p1y = my;             p1z = mz;
+    p2x = mx + dax;       p2y = my + day;       p2z = mz + daz;
+    p3x = mx + dbx;       p3y = my + dby;       p3z = mz + dbz;
+    p4x = mx + dax + dbx; p4y = my + day + dby; p4z = mz + daz + dbz;
+    
+    let vertexPosition = [p1x,p1y,p1z, p2x,p2y,p2z, p4x,p4y,p4z,  //Pierwszy trójkąt
+                          p1x,p1y,p1z, p4x,p4y,p4z, p3x,p3y,p3z]; //Drugi trójkąt
+                          
+    return vertexPosition;
+  }
+  
+  function createNormal(p1x,p1y,p1z,p2x,p2y,p2z,p3x,p3y,p3z) //Wyznaczenie wektora normalnego dla trójkąta
+  {
+    let v1x = p2x - p1x;
+    let v1y = p2y - p1y;
+    let v1z = p2z - p1z;
+    
+    let v2x = p3x - p1x;
+    let v2y = p3y - p1y;
+    let v2z = p3z - p1z;
+    
+    let v3x =  v1y*v2z - v1z*v2y;
+    let v3y =  v1z*v2x - v1x*v2z;
+    let v3z =  v1x*v2y - v1y*v2x;
+    
+    vl = Math.sqrt(v3x*v3x+v3y*v3y+v3z*v3z); //Obliczenie długości wektora
+     
+    v3x/=vl; //Normalizacja na zakreś -1 1
+    v3y/=vl;
+    v3z/=vl;
+    
+    let vertexNormal = [v3x,v3y,v3z, v3x,v3y,v3z, v3x,v3y,v3z];
+    return vertexNormal;
+  }
+  
+  function CreateBox(x,y,z,dx,dy,dz)
+  {
+    //Opis sceny 3D, położenie punktów w przestrzeni 3D w formacie X,Y,Z 
+    let vertexPosition = []; //Każdy punkt 3 składowe - X1,Y1,Z1
+    let vertexNormal = [];
+    let indexes = [];
+    
+    vertexPosition.push(...[-1,-1,+1]);
+    vertexNormal.push(...[-1,-1,+1]);
+  
+    vertexPosition.push(...[+1,-1,+1]);
+    vertexNormal.push(...[+1,-1,+1]);
+  
+    vertexPosition.push(...[+1,+1,+1]);
+    vertexNormal.push(...[+1,+1,+1]);
+  
+    vertexPosition.push(...[-1,+1,+1]);
+    vertexNormal.push(...[-1,+1,+1]);
+    
+    vertexPosition.push(...[-1,-1,-1]);
+    vertexNormal.push(...[-1,-1,-1]);
+    
+    vertexPosition.push(...[+1,-1,-1]);
+    vertexNormal.push(...[+1,-1,-1]);
+    
+    vertexPosition.push(...[+1,+1,-1]);
+    vertexNormal.push(...[+1,+1,-1]);
+  
+    vertexPosition.push(...[-1,+1,-1]);
+    vertexNormal.push(...[-1,+1,-1]);
+  
+    indexes.push(...[0,1,2]); //Pierwszy trójkąt
+    indexes.push(...[0,2,3]); //Drugi trójkąt
+  
+    indexes.push(...[1,5,6]);
+    indexes.push(...[1,6,2]);
+  
+    indexes.push(...[3,2,6]);
+    indexes.push(...[3,6,7]);
+  
+    //Dodaj pozostałe trójkąty pudełka
+  
+    return [indexes, vertexPosition, vertexNormal];
+  }
+  
+  async function* makeTextFileLineIterator(fileURL) {
+    const utf8Decoder = new TextDecoder('utf-8');
+    const response = await fetch(fileURL);
+    const reader = response.body.getReader();
+    let { value: chunk, done: readerDone } = await reader.read();
+    chunk = chunk ? utf8Decoder.decode(chunk) : '';
+  
+    const re = /\n|\r|\r\n/gm;
+    let startIndex = 0;
+    let result;
+  
+    for (;;) {
+      let result = re.exec(chunk);
+      if (!result) {
+        if (readerDone) {
+          break;
+        }
+        let remainder = chunk.substr(startIndex);
+        ({ value: chunk, done: readerDone } = await reader.read());
+        chunk = remainder + (chunk ? utf8Decoder.decode(chunk) : '');
+        startIndex = re.lastIndex = 0;
+        continue;
+      }
+      yield chunk.substring(startIndex, result.index);
+      startIndex = re.lastIndex;
+    }
+    if (startIndex < chunk.length) {
+      // last line didn't end in a newline char
+      yield chunk.substr(startIndex);
+    }
+  }
+  
+  async function LoadObj(filename)
+  {
+    //const response = await fetch('Auto3.obj');
+    //console.log(response.body);
+  
+    let rawVertexPosition = [0,0,0]; //Dodana 0 pozycja która nie będzie uzywana
+    let rawVertexNormal = [0,0,0];//Dodana 0 pozycja która nie będzie uzywana
+    let rawVertexCoords = [0,0];//Dodana 0 pozycja która nie będzie uzywana
+  
+    //Opis sceny 3D, położenie punktów w przestrzeni 3D w formacie X,Y,Z 
+    let vertexPosition = []; //Każdy punkt 3 składowe - X1,Y1,Z1
+    let vertexNormal = [];
+    let vertexCoord = [];
+    let indexes = [];
+  
+  
+    let aa = new Map();
+    for await (let line of makeTextFileLineIterator(filename)) {
+      const lineArray = line.split(' ');
+      switch(lineArray[0]) {
+        case "v": { //Położenie wierzchołków
+          const x = parseFloat(lineArray[1]);
+          const y = parseFloat(lineArray[2]);
+          const z = parseFloat(lineArray[3]);
+          rawVertexPosition.push(...[x,y,z]);
+          break;
+        };
+        case "vn": { //Wektor normalny
+          const xn = parseFloat(lineArray[1]);
+          const yn = parseFloat(lineArray[2]);
+          const zn = parseFloat(lineArray[3]);
+          rawVertexNormal.push(...[xn,yn,zn]);
+          break;
+        }
+        case "vt": { //Współrzędne tekstury
+          const u = parseFloat(lineArray[1]);
+          const v = parseFloat(lineArray[2]);
+          rawVertexCoords.push(...[u,v]);
+          break;
+        }
+        case "f": { //Indeksy trójkątów
+          const i0 = lineArray[1];
+          const i1 = lineArray[2];
+          const i2 = lineArray[3];
+          for(let ii of [i0,i1,i2]) {
+            if(!aa.has(ii)) { //Ten indeks nie był jeszcze przemapowany
+              //console.log(ii);
+              const iia = ii.split('/');
+              const indexVertexPosition = parseInt(iia[0]);//Indeks w tablicy położeń wierzchołków
+              const indexVertexCoord = parseInt(iia[1]); //Indeks w tablicy wspołrzędnych tekstur
+              const indexVertexNormal = parseInt(iia[2]); //Indeks w tablicy wektorów normalnych
+              const index = vertexPosition.length/3;
+              //console.log(index);
+              //Skopiuj wartości
+              vertexPosition.push(rawVertexPosition[indexVertexPosition*3+0]); //Skopiowanie położenia X
+              vertexPosition.push(rawVertexPosition[indexVertexPosition*3+1]); //Skopiowanie położenia Y
+              vertexPosition.push(rawVertexPosition[indexVertexPosition*3+2]); //Skopiowanie położenia Z
+  
+              vertexNormal.push(rawVertexNormal[indexVertexNormal*3+0]); //Skopiowanie składowej X wektora normalnego
+              vertexNormal.push(rawVertexNormal[indexVertexNormal*3+1]); //Skopiowanie składowej Y wektora normalnego
+              vertexNormal.push(rawVertexNormal[indexVertexNormal*3+2]); //Skopiowanie składowej Z wektora normalnego
+  
+              vertexCoord.push(rawVertexCoords[indexVertexCoord*2+0]); //Skopiowanie składowej U wspołrzędnej tekstury
+              vertexCoord.push(rawVertexCoords[indexVertexCoord*2+1]); //Skopiowanie składowej V wspołrzędnej tekstury
+              aa.set(ii,index);
+            }
+            //console.log(aa.get(ii));
+            indexes.push(aa.get(ii)) //Dodaj jego wynikowy indeks do tablicy indeksów
+          }
+          //rawVertexCoords.push(...[u,v]);
+          break;
+        }
+      }
+    }
+  
+    console.log(`Wczytano ${rawVertexPosition.length/3-1} wierzchołków`);
+    console.log(`Wczytano ${rawVertexNormal.length/3-1} wektorów normalnych`);
+    console.log(`Wczytano ${rawVertexCoords.length/2-1} współrzędnych tekstury`);
+  
+    console.log(`W efekcie mapowania stworzono ${vertexPosition.length/3} wierzchołków`);
+    console.log(`W efekcie mapowania stworzono ${indexes.length} indeksów`);
    
-  v3x/=vl; //Normalizacja na zakreś -1 1
-  v3y/=vl;
-  v3z/=vl;
-  
-  let vertexNormal = [v3x,v3y,v3z, v3x,v3y,v3z, v3x,v3y,v3z];
-  return vertexNormal;
-}
-
-function CreateBox(x,y,z,dx,dy,dz)
-{
-  //Opis sceny 3D, położenie punktów w przestrzeni 3D w formacie X,Y,Z 
-  let vertexPosition = []; //Każdy punkt 3 składowe - X1,Y1,Z1
-  let vertexNormal = [];
-  let indexes = [];
-  
-vertexPosition.push(...[1.207888,6.506021,-0.745439]);
-vertexPosition.push(...[1.000000,4.506021,-0.745439]);
-vertexPosition.push(...[1.207888,6.506021,0.764269]);
-vertexPosition.push(...[1.000000,4.506021,0.764269]);
-vertexPosition.push(...[0.634016,4.221185,0.395249]);
-vertexPosition.push(...[0.634016,4.221185,-0.395249]);
-vertexPosition.push(...[0.761232,4.221185,0.522465]);
-vertexPosition.push(...[0.127216,4.221185,0.395249]);
-vertexPosition.push(...[0.761232,4.221185,-0.522465]);
-vertexPosition.push(...[0.127216,2.708696,-0.395249]);
-vertexPosition.push(...[0.127216,4.221185,-0.395249]);
-vertexPosition.push(...[0.127216,2.708696,0.395249]);
-vertexPosition.push(...[0.634016,2.708696,0.395249]);
-vertexPosition.push(...[0.634016,2.708696,-0.395249]);
-vertexPosition.push(...[0.127216,2.461632,-0.503586]);
-vertexPosition.push(...[0.127216,2.461632,0.293993]);
-vertexPosition.push(...[0.710342,2.461632,0.293993]);
-vertexPosition.push(...[0.710342,2.461632,-0.503586]);
-vertexPosition.push(...[0.127216,2.282726,-0.503586]);
-vertexPosition.push(...[0.127216,2.282726,0.293993]);
-vertexPosition.push(...[0.710342,2.282726,0.293993]);
-vertexPosition.push(...[0.710342,2.282726,-0.503586]);
-vertexPosition.push(...[0.188502,2.087853,-0.484979]);
-vertexPosition.push(...[0.188502,2.087853,0.277795]);
-vertexPosition.push(...[0.719330,2.087853,0.277795]);
-vertexPosition.push(...[0.719330,2.087853,-0.484979]);
-vertexPosition.push(...[0.188502,0.239846,-0.484979]);
-vertexPosition.push(...[0.188502,0.239846,0.277795]);
-vertexPosition.push(...[0.719330,0.239846,0.277795]);
-vertexPosition.push(...[0.854094,0.239846,-0.484979]);
-vertexPosition.push(...[0.188502,-0.095979,-0.484979]);
-vertexPosition.push(...[0.188502,-0.095979,0.277795]);
-vertexPosition.push(...[0.719330,-0.095979,0.277795]);
-vertexPosition.push(...[0.854094,-0.095979,-0.484979]);
-vertexPosition.push(...[0.854094,0.146125,-0.708328]);
-vertexPosition.push(...[0.188502,0.146125,-0.708328]);
-vertexPosition.push(...[0.854094,-0.095979,-0.836398]);
-vertexPosition.push(...[0.188502,-0.095979,-0.836398]);
-vertexPosition.push(...[1.207888,7.069957,-0.745439]);
-vertexPosition.push(...[1.207888,7.069957,0.764269]);
-vertexPosition.push(...[1.803869,6.547978,-0.321268]);
-vertexPosition.push(...[1.803869,6.547978,0.340098]);
-vertexPosition.push(...[1.803869,7.028000,-0.321268]);
-vertexPosition.push(...[1.803869,7.028000,0.340098]);
-vertexPosition.push(...[3.286264,6.547978,-0.321268]);
-vertexPosition.push(...[3.286264,6.547978,0.340098]);
-vertexPosition.push(...[3.286264,7.028000,-0.321268]);
-vertexPosition.push(...[3.286264,7.028000,0.340098]);
-vertexPosition.push(...[3.534937,6.547978,-0.210468]);
-vertexPosition.push(...[3.534937,6.547978,0.445953]);
-vertexPosition.push(...[3.534937,7.028000,-0.210468]);
-vertexPosition.push(...[3.534937,7.028000,0.445953]);
-vertexPosition.push(...[3.788627,6.547978,-0.210468]);
-vertexPosition.push(...[3.788627,6.547978,0.445953]);
-vertexPosition.push(...[3.788627,7.028000,-0.210468]);
-vertexPosition.push(...[3.788627,7.028000,0.445953]);
-vertexPosition.push(...[4.005948,6.547978,-0.170085]);
-vertexPosition.push(...[4.005948,6.547978,0.256984]);
-vertexPosition.push(...[4.005948,7.028000,-0.170085]);
-vertexPosition.push(...[4.005948,7.028000,0.256984]);
-vertexPosition.push(...[5.095587,6.547978,-0.170085]);
-vertexPosition.push(...[5.095587,6.547978,0.256984]);
-vertexPosition.push(...[5.095587,7.028000,-0.170085]);
-vertexPosition.push(...[5.095587,7.028000,0.256984]);
-vertexPosition.push(...[5.373609,6.547978,-0.321268]);
-vertexPosition.push(...[5.373609,6.547978,0.340098]);
-vertexPosition.push(...[5.373609,7.028000,-0.321268]);
-vertexPosition.push(...[5.373609,7.028000,0.340098]);
-vertexPosition.push(...[5.136646,6.436736,-0.212320]);
-vertexPosition.push(...[5.136646,6.436736,0.340098]);
-vertexPosition.push(...[5.373609,6.392235,-0.321268]);
-vertexPosition.push(...[5.373609,6.392235,0.340098]);
-vertexPosition.push(...[5.451252,6.547978,-0.321268]);
-vertexPosition.push(...[5.451252,6.547978,0.340098]);
-vertexPosition.push(...[5.533483,7.028000,-0.321268]);
-vertexPosition.push(...[5.533483,7.028000,0.340098]);
-vertexPosition.push(...[5.451449,6.547978,-0.321268]);
-vertexPosition.push(...[5.451449,6.547978,0.340098]);
-vertexPosition.push(...[5.451449,6.392235,-0.321268]);
-vertexPosition.push(...[5.451449,6.392235,0.340098]);
-vertexPosition.push(...[0.426565,7.419511,-0.304547]);
-vertexPosition.push(...[0.426565,7.419511,0.323377]);
-vertexPosition.push(...[0.426565,7.860124,-0.304547]);
-vertexPosition.push(...[0.426565,7.860124,0.323377]);
-vertexPosition.push(...[0.600360,7.976569,-0.550328]);
-vertexPosition.push(...[0.600360,7.976569,0.569157]);
-vertexPosition.push(...[0.600360,9.107283,-0.550328]);
-vertexPosition.push(...[0.600360,9.107283,0.569157]);
-vertexPosition.push(...[0.754605,8.450649,-0.150468]);
-vertexPosition.push(...[0.754605,8.450649,0.169297]);
-vertexPosition.push(...[0.754605,8.833549,-0.150468]);
-vertexPosition.push(...[0.754605,8.833549,0.169297]);
-vertexPosition.push(...[0.888713,8.365427,-0.158014]);
-vertexPosition.push(...[0.888713,8.365427,0.176843]);
-vertexPosition.push(...[0.888713,8.918772,-0.158014]);
-vertexPosition.push(...[0.888713,8.918772,0.176843]);
-vertexPosition.push(...[0.278454,9.204523,-0.550328]);
-vertexPosition.push(...[0.278454,9.204523,0.569157]);
-vertexPosition.push(...[0.153124,8.970413,-0.550328]);
-vertexPosition.push(...[0.357086,8.970413,-0.550328]);
-vertexPosition.push(...[5.451252,6.547978,-0.319599]);
-vertexPosition.push(...[0.600360,9.107283,-0.618750]);
-vertexPosition.push(...[0.357086,8.970413,-0.618750]);
-vertexPosition.push(...[0.153124,8.970413,-0.618750]);
-vertexPosition.push(...[-1.207888,6.506021,-0.745439]);
-vertexPosition.push(...[-1.000000,4.506021,-0.745439]);
-vertexPosition.push(...[-1.207888,6.506021,0.764269]);
-vertexPosition.push(...[-1.000000,4.506021,0.764269]);
-vertexPosition.push(...[0.000000,4.506021,-0.745439]);
-vertexPosition.push(...[0.000000,6.506021,0.764269]);
-vertexPosition.push(...[0.000000,4.506021,0.764269]);
-vertexPosition.push(...[0.000000,6.506021,-0.745439]);
-vertexPosition.push(...[0.000000,4.221185,0.522465]);
-vertexPosition.push(...[-0.634016,4.221185,0.395249]);
-vertexPosition.push(...[-0.634016,4.221185,-0.395249]);
-vertexPosition.push(...[0.000000,4.221185,-0.522465]);
-vertexPosition.push(...[-0.761232,4.221185,0.522465]);
-vertexPosition.push(...[-0.127216,4.221185,0.395249]);
-vertexPosition.push(...[-0.761232,4.221185,-0.522465]);
-vertexPosition.push(...[-0.127216,2.708696,-0.395249]);
-vertexPosition.push(...[-0.127216,4.221185,-0.395249]);
-vertexPosition.push(...[-0.127216,2.708696,0.395249]);
-vertexPosition.push(...[-0.634016,2.708696,0.395249]);
-vertexPosition.push(...[-0.634016,2.708696,-0.395249]);
-vertexPosition.push(...[-0.127216,2.461632,-0.503586]);
-vertexPosition.push(...[-0.127216,2.461632,0.293993]);
-vertexPosition.push(...[-0.710342,2.461632,0.293993]);
-vertexPosition.push(...[-0.710342,2.461632,-0.503586]);
-vertexPosition.push(...[-0.127216,2.282726,-0.503586]);
-vertexPosition.push(...[-0.127216,2.282726,0.293993]);
-vertexPosition.push(...[-0.710342,2.282726,0.293993]);
-vertexPosition.push(...[-0.710342,2.282726,-0.503586]);
-vertexPosition.push(...[-0.188502,2.087853,-0.484979]);
-vertexPosition.push(...[-0.188502,2.087853,0.277795]);
-vertexPosition.push(...[-0.719330,2.087853,0.277795]);
-vertexPosition.push(...[-0.719330,2.087853,-0.484979]);
-vertexPosition.push(...[-0.188502,0.239846,-0.484979]);
-vertexPosition.push(...[-0.188502,0.239846,0.277795]);
-vertexPosition.push(...[-0.719330,0.239846,0.277795]);
-vertexPosition.push(...[-0.854094,0.239846,-0.484979]);
-vertexPosition.push(...[-0.188502,-0.095979,-0.484979]);
-vertexPosition.push(...[-0.188502,-0.095979,0.277795]);
-vertexPosition.push(...[-0.719330,-0.095979,0.277795]);
-vertexPosition.push(...[-0.854094,-0.095979,-0.484979]);
-vertexPosition.push(...[-0.854094,0.146125,-0.708328]);
-vertexPosition.push(...[-0.188502,0.146125,-0.708328]);
-vertexPosition.push(...[-0.854094,-0.095979,-0.836398]);
-vertexPosition.push(...[-0.188502,-0.095979,-0.836398]);
-vertexPosition.push(...[-1.207888,7.069957,-0.745439]);
-vertexPosition.push(...[-1.207888,7.069957,0.764269]);
-vertexPosition.push(...[0.000000,7.069957,-0.745439]);
-vertexPosition.push(...[0.000000,7.069957,0.764269]);
-vertexPosition.push(...[-1.803869,6.547978,-0.321268]);
-vertexPosition.push(...[-1.803869,6.547978,0.340098]);
-vertexPosition.push(...[-1.803869,7.028000,-0.321268]);
-vertexPosition.push(...[-1.803869,7.028000,0.340098]);
-vertexPosition.push(...[-3.286264,6.547978,-0.321268]);
-vertexPosition.push(...[-3.286264,6.547978,0.340098]);
-vertexPosition.push(...[-3.286264,7.028000,-0.321268]);
-vertexPosition.push(...[-3.286264,7.028000,0.340098]);
-vertexPosition.push(...[-3.534937,6.547978,-0.210468]);
-vertexPosition.push(...[-3.534937,6.547978,0.445953]);
-vertexPosition.push(...[-3.534937,7.028000,-0.210468]);
-vertexPosition.push(...[-3.534937,7.028000,0.445953]);
-vertexPosition.push(...[-3.788627,6.547978,-0.210468]);
-vertexPosition.push(...[-3.788627,6.547978,0.445953]);
-vertexPosition.push(...[-3.788627,7.028000,-0.210468]);
-vertexPosition.push(...[-3.788627,7.028000,0.445953]);
-vertexPosition.push(...[-4.005948,6.547978,-0.170085]);
-vertexPosition.push(...[-4.005948,6.547978,0.256984]);
-vertexPosition.push(...[-4.005948,7.028000,-0.170085]);
-vertexPosition.push(...[-4.005948,7.028000,0.256984]);
-vertexPosition.push(...[-5.095587,6.547978,-0.170085]);
-vertexPosition.push(...[-5.095587,6.547978,0.256984]);
-vertexPosition.push(...[-5.095587,7.028000,-0.170085]);
-vertexPosition.push(...[-5.095587,7.028000,0.256984]);
-vertexPosition.push(...[-5.373609,6.547978,-0.321268]);
-vertexPosition.push(...[-5.373609,6.547978,0.340098]);
-vertexPosition.push(...[-5.373609,7.028000,-0.321268]);
-vertexPosition.push(...[-5.373609,7.028000,0.340098]);
-vertexPosition.push(...[-5.136646,6.436736,-0.212320]);
-vertexPosition.push(...[-5.136646,6.436736,0.340098]);
-vertexPosition.push(...[-5.373609,6.392235,-0.321268]);
-vertexPosition.push(...[-5.373609,6.392235,0.340098]);
-vertexPosition.push(...[-5.451252,6.547978,-0.321268]);
-vertexPosition.push(...[-5.451252,6.547978,0.340098]);
-vertexPosition.push(...[-5.533483,7.028000,-0.321268]);
-vertexPosition.push(...[-5.533483,7.028000,0.340098]);
-vertexPosition.push(...[-5.451449,6.547978,-0.321268]);
-vertexPosition.push(...[-5.451449,6.547978,0.340098]);
-vertexPosition.push(...[-5.451449,6.392235,-0.321268]);
-vertexPosition.push(...[-5.451449,6.392235,0.340098]);
-vertexPosition.push(...[-0.426565,7.419511,-0.304547]);
-vertexPosition.push(...[-0.426565,7.419511,0.323377]);
-vertexPosition.push(...[0.000000,7.419511,-0.304547]);
-vertexPosition.push(...[0.000000,7.419511,0.323377]);
-vertexPosition.push(...[-0.426565,7.860124,-0.304547]);
-vertexPosition.push(...[-0.426565,7.860124,0.323377]);
-vertexPosition.push(...[0.000000,7.860124,-0.304547]);
-vertexPosition.push(...[0.000000,7.860124,0.323377]);
-vertexPosition.push(...[-0.600360,7.976569,-0.550328]);
-vertexPosition.push(...[-0.600360,7.976569,0.569157]);
-vertexPosition.push(...[0.000000,7.976569,-0.550328]);
-vertexPosition.push(...[0.000000,7.976569,0.569157]);
-vertexPosition.push(...[-0.600360,9.107283,-0.550328]);
-vertexPosition.push(...[-0.600360,9.107283,0.569157]);
-vertexPosition.push(...[0.000000,9.107283,-0.550328]);
-vertexPosition.push(...[0.000000,9.107283,0.569157]);
-vertexPosition.push(...[-0.754605,8.450649,-0.150468]);
-vertexPosition.push(...[-0.754605,8.450649,0.169297]);
-vertexPosition.push(...[-0.754605,8.833549,-0.150468]);
-vertexPosition.push(...[-0.754605,8.833549,0.169297]);
-vertexPosition.push(...[-0.888713,8.365427,-0.158014]);
-vertexPosition.push(...[-0.888713,8.365427,0.176843]);
-vertexPosition.push(...[-0.888713,8.918772,-0.158014]);
-vertexPosition.push(...[-0.888713,8.918772,0.176843]);
-vertexPosition.push(...[-0.278454,9.204523,-0.550328]);
-vertexPosition.push(...[-0.278454,9.204523,0.569157]);
-vertexPosition.push(...[0.000000,9.204523,-0.550328]);
-vertexPosition.push(...[0.000000,9.204523,0.569157]);
-vertexPosition.push(...[-0.153124,8.970413,-0.550328]);
-vertexPosition.push(...[-0.357086,8.970413,-0.550328]);
-vertexPosition.push(...[-5.451252,6.547978,-0.319599]);
-vertexPosition.push(...[0.000000,9.107283,-0.618750]);
-vertexPosition.push(...[-0.600360,9.107283,-0.618750]);
-vertexPosition.push(...[-0.357086,8.970413,-0.618750]);
-vertexPosition.push(...[-0.153124,8.970413,-0.618750]);
-
-indexes.push(...[2,7,9]);
-indexes.push(...[1,4,2]);
-indexes.push(...[112,2,109]);
-indexes.push(...[4,110,111]);
-indexes.push(...[3,152,110]);
-indexes.push(...[5,14,6]);
-indexes.push(...[111,7,4]);
-indexes.push(...[109,9,116]);
-indexes.push(...[5,113,8]);
-indexes.push(...[6,7,5]);
-indexes.push(...[11,9,6]);
-indexes.push(...[8,116,11]);
-indexes.push(...[14,17,18]);
-indexes.push(...[6,10,11]);
-indexes.push(...[8,13,5]);
-indexes.push(...[11,12,8]);
-indexes.push(...[18,19,15]);
-indexes.push(...[10,16,12]);
-indexes.push(...[14,15,10]);
-indexes.push(...[13,16,17]);
-indexes.push(...[21,26,22]);
-indexes.push(...[16,21,17]);
-indexes.push(...[17,22,18]);
-indexes.push(...[15,20,16]);
-indexes.push(...[26,29,30]);
-indexes.push(...[20,23,24]);
-indexes.push(...[22,23,19]);
-indexes.push(...[21,24,25]);
-indexes.push(...[30,36,27]);
-indexes.push(...[23,28,24]);
-indexes.push(...[26,27,23]);
-indexes.push(...[24,29,25]);
-indexes.push(...[31,33,32]);
-indexes.push(...[28,33,29]);
-indexes.push(...[29,34,30]);
-indexes.push(...[27,32,28]);
-indexes.push(...[35,38,36]);
-indexes.push(...[34,35,30]);
-indexes.push(...[31,36,38]);
-indexes.push(...[31,37,34]);
-indexes.push(...[151,81,39]);
-indexes.push(...[112,39,1]);
-indexes.push(...[40,42,44]);
-indexes.push(...[43,45,41]);
-indexes.push(...[40,43,39]);
-indexes.push(...[1,42,3]);
-indexes.push(...[39,41,1]);
-indexes.push(...[46,52,48]);
-indexes.push(...[44,47,43]);
-indexes.push(...[42,48,44]);
-indexes.push(...[41,46,42]);
-indexes.push(...[50,56,52]);
-indexes.push(...[46,49,50]);
-indexes.push(...[47,49,45]);
-indexes.push(...[48,51,47]);
-indexes.push(...[55,57,53]);
-indexes.push(...[49,54,50]);
-indexes.push(...[51,53,49]);
-indexes.push(...[52,55,51]);
-indexes.push(...[58,64,60]);
-indexes.push(...[55,60,59]);
-indexes.push(...[54,60,56]);
-indexes.push(...[53,58,54]);
-indexes.push(...[62,69,70]);
-indexes.push(...[57,62,58]);
-indexes.push(...[59,61,57]);
-indexes.push(...[60,63,59]);
-indexes.push(...[67,73,65]);
-indexes.push(...[63,65,61]);
-indexes.push(...[63,68,67]);
-indexes.push(...[62,68,64]);
-indexes.push(...[69,72,70]);
-indexes.push(...[65,69,61]);
-indexes.push(...[66,70,72]);
-indexes.push(...[68,75,67]);
-indexes.push(...[68,74,76]);
-indexes.push(...[78,79,77]);
-indexes.push(...[71,80,72]);
-indexes.push(...[82,200,196]);
-indexes.push(...[152,82,196]);
-indexes.push(...[39,82,40]);
-indexes.push(...[84,204,200]);
-indexes.push(...[81,84,82]);
-indexes.push(...[195,83,81]);
-indexes.push(...[83,86,84]);
-indexes.push(...[83,203,85]);
-indexes.push(...[207,97,87]);
-indexes.push(...[86,208,204]);
-indexes.push(...[87,89,85]);
-indexes.push(...[90,96,92]);
-indexes.push(...[88,90,92]);
-indexes.push(...[85,90,86]);
-indexes.push(...[88,91,87]);
-indexes.push(...[93,96,94]);
-indexes.push(...[92,95,91]);
-indexes.push(...[89,95,93]);
-indexes.push(...[89,94,90]);
-indexes.push(...[219,98,97]);
-indexes.push(...[208,98,220]);
-indexes.push(...[87,98,88]);
-indexes.push(...[99,100,203]);
-indexes.push(...[87,224,207]);
-indexes.push(...[73,79,71]);
-indexes.push(...[76,101,75]);
-indexes.push(...[65,73,101]);
-indexes.push(...[80,78,74]);
-indexes.push(...[77,73,101]);
-indexes.push(...[224,103,104]);
-indexes.push(...[99,103,100]);
-indexes.push(...[100,102,87]);
-indexes.push(...[207,104,99]);
-indexes.push(...[2,4,7]);
-indexes.push(...[1,3,4]);
-indexes.push(...[112,1,2]);
-indexes.push(...[4,3,110]);
-indexes.push(...[3,40,152]);
-indexes.push(...[5,13,14]);
-indexes.push(...[111,113,7]);
-indexes.push(...[109,2,9]);
-indexes.push(...[5,7,113]);
-indexes.push(...[6,9,7]);
-indexes.push(...[11,116,9]);
-indexes.push(...[8,113,116]);
-indexes.push(...[14,13,17]);
-indexes.push(...[6,14,10]);
-indexes.push(...[8,12,13]);
-indexes.push(...[11,10,12]);
-indexes.push(...[18,22,19]);
-indexes.push(...[10,15,16]);
-indexes.push(...[14,18,15]);
-indexes.push(...[13,12,16]);
-indexes.push(...[21,25,26]);
-indexes.push(...[16,20,21]);
-indexes.push(...[17,21,22]);
-indexes.push(...[15,19,20]);
-indexes.push(...[26,25,29]);
-indexes.push(...[20,19,23]);
-indexes.push(...[22,26,23]);
-indexes.push(...[21,20,24]);
-indexes.push(...[30,35,36]);
-indexes.push(...[23,27,28]);
-indexes.push(...[26,30,27]);
-indexes.push(...[24,28,29]);
-indexes.push(...[31,34,33]);
-indexes.push(...[28,32,33]);
-indexes.push(...[29,33,34]);
-indexes.push(...[27,31,32]);
-indexes.push(...[35,37,38]);
-indexes.push(...[34,37,35]);
-indexes.push(...[31,27,36]);
-indexes.push(...[31,38,37]);
-indexes.push(...[151,195,81]);
-indexes.push(...[112,151,39]);
-indexes.push(...[40,3,42]);
-indexes.push(...[43,47,45]);
-indexes.push(...[40,44,43]);
-indexes.push(...[1,41,42]);
-indexes.push(...[39,43,41]);
-indexes.push(...[46,50,52]);
-indexes.push(...[44,48,47]);
-indexes.push(...[42,46,48]);
-indexes.push(...[41,45,46]);
-indexes.push(...[50,54,56]);
-indexes.push(...[46,45,49]);
-indexes.push(...[47,51,49]);
-indexes.push(...[48,52,51]);
-indexes.push(...[55,59,57]);
-indexes.push(...[49,53,54]);
-indexes.push(...[51,55,53]);
-indexes.push(...[52,56,55]);
-indexes.push(...[58,62,64]);
-indexes.push(...[55,56,60]);
-indexes.push(...[54,58,60]);
-indexes.push(...[53,57,58]);
-indexes.push(...[62,61,69]);
-indexes.push(...[57,61,62]);
-indexes.push(...[59,63,61]);
-indexes.push(...[60,64,63]);
-indexes.push(...[67,75,73]);
-indexes.push(...[63,67,65]);
-indexes.push(...[63,64,68]);
-indexes.push(...[62,66,68]);
-indexes.push(...[69,71,72]);
-indexes.push(...[65,71,69]);
-indexes.push(...[66,62,70]);
-indexes.push(...[68,76,75]);
-indexes.push(...[68,66,74]);
-indexes.push(...[78,80,79]);
-indexes.push(...[71,79,80]);
-indexes.push(...[82,84,200]);
-indexes.push(...[152,40,82]);
-indexes.push(...[39,81,82]);
-indexes.push(...[84,86,204]);
-indexes.push(...[81,83,84]);
-indexes.push(...[195,199,83]);
-indexes.push(...[83,85,86]);
-indexes.push(...[83,199,203]);
-indexes.push(...[207,219,97]);
-indexes.push(...[86,88,208]);
-indexes.push(...[87,91,89]);
-indexes.push(...[90,94,96]);
-indexes.push(...[88,86,90]);
-indexes.push(...[85,89,90]);
-indexes.push(...[88,92,91]);
-indexes.push(...[93,95,96]);
-indexes.push(...[92,96,95]);
-indexes.push(...[89,91,95]);
-indexes.push(...[89,93,94]);
-indexes.push(...[219,220,98]);
-indexes.push(...[208,88,98]);
-indexes.push(...[87,97,98]);
-indexes.push(...[100,87,85]);
-indexes.push(...[85,203,100]);
-indexes.push(...[203,207,99]);
-indexes.push(...[87,102,224]);
-indexes.push(...[71,65,73]);
-indexes.push(...[73,77,79]);
-indexes.push(...[74,101,76]);
-indexes.push(...[101,73,75]);
-indexes.push(...[74,66,101]);
-indexes.push(...[66,65,101]);
-indexes.push(...[74,66,72]);
-indexes.push(...[72,80,74]);
-indexes.push(...[74,78,101]);
-indexes.push(...[78,77,101]);
-indexes.push(...[224,102,103]);
-indexes.push(...[99,104,103]);
-indexes.push(...[100,103,102]);
-indexes.push(...[207,224,104]);
-indexes.push(...[106,119,117]);
-indexes.push(...[105,106,108]);
-indexes.push(...[112,109,106]);
-indexes.push(...[108,111,110]);
-indexes.push(...[107,110,152]);
-indexes.push(...[114,115,124]);
-indexes.push(...[111,108,117]);
-indexes.push(...[109,116,119]);
-indexes.push(...[114,118,113]);
-indexes.push(...[115,114,117]);
-indexes.push(...[121,115,119]);
-indexes.push(...[118,121,116]);
-indexes.push(...[124,128,127]);
-indexes.push(...[115,121,120]);
-indexes.push(...[118,114,123]);
-indexes.push(...[121,118,122]);
-indexes.push(...[128,125,129]);
-indexes.push(...[120,122,126]);
-indexes.push(...[124,120,125]);
-indexes.push(...[123,127,126]);
-indexes.push(...[131,132,136]);
-indexes.push(...[126,127,131]);
-indexes.push(...[127,128,132]);
-indexes.push(...[125,126,130]);
-indexes.push(...[136,140,139]);
-indexes.push(...[130,134,133]);
-indexes.push(...[132,129,133]);
-indexes.push(...[131,135,134]);
-indexes.push(...[140,137,146]);
-indexes.push(...[133,134,138]);
-indexes.push(...[136,133,137]);
-indexes.push(...[134,135,139]);
-indexes.push(...[141,142,143]);
-indexes.push(...[138,139,143]);
-indexes.push(...[139,140,144]);
-indexes.push(...[137,138,142]);
-indexes.push(...[145,146,148]);
-indexes.push(...[144,140,145]);
-indexes.push(...[141,148,146]);
-indexes.push(...[141,144,147]);
-indexes.push(...[151,149,193]);
-indexes.push(...[112,105,149]);
-indexes.push(...[150,156,154]);
-indexes.push(...[155,153,157]);
-indexes.push(...[150,149,155]);
-indexes.push(...[105,107,154]);
-indexes.push(...[149,105,153]);
-indexes.push(...[158,160,164]);
-indexes.push(...[156,155,159]);
-indexes.push(...[154,156,160]);
-indexes.push(...[153,154,158]);
-indexes.push(...[162,164,168]);
-indexes.push(...[158,162,161]);
-indexes.push(...[159,157,161]);
-indexes.push(...[160,159,163]);
-indexes.push(...[167,165,169]);
-indexes.push(...[161,162,166]);
-indexes.push(...[163,161,165]);
-indexes.push(...[164,163,167]);
-indexes.push(...[170,172,176]);
-indexes.push(...[167,171,172]);
-indexes.push(...[166,168,172]);
-indexes.push(...[165,166,170]);
-indexes.push(...[174,182,181]);
-indexes.push(...[169,170,174]);
-indexes.push(...[171,169,173]);
-indexes.push(...[172,171,175]);
-indexes.push(...[179,177,185]);
-indexes.push(...[175,173,177]);
-indexes.push(...[175,179,180]);
-indexes.push(...[174,176,180]);
-indexes.push(...[181,182,184]);
-indexes.push(...[177,173,181]);
-indexes.push(...[178,184,182]);
-indexes.push(...[180,179,187]);
-indexes.push(...[180,188,186]);
-indexes.push(...[190,189,191]);
-indexes.push(...[183,184,192]);
-indexes.push(...[194,196,200]);
-indexes.push(...[152,196,194]);
-indexes.push(...[149,150,194]);
-indexes.push(...[198,200,204]);
-indexes.push(...[193,194,198]);
-indexes.push(...[195,193,197]);
-indexes.push(...[197,198,202]);
-indexes.push(...[197,201,203]);
-indexes.push(...[207,205,217]);
-indexes.push(...[202,204,208]);
-indexes.push(...[205,201,209]);
-indexes.push(...[210,212,216]);
-indexes.push(...[206,212,210]);
-indexes.push(...[201,202,210]);
-indexes.push(...[206,205,211]);
-indexes.push(...[213,214,216]);
-indexes.push(...[212,211,215]);
-indexes.push(...[209,213,215]);
-indexes.push(...[209,210,214]);
-indexes.push(...[219,217,218]);
-indexes.push(...[208,220,218]);
-indexes.push(...[205,206,218]);
-indexes.push(...[221,203,222]);
-indexes.push(...[205,207,224]);
-indexes.push(...[185,183,191]);
-indexes.push(...[188,187,223]);
-indexes.push(...[177,223,185]);
-indexes.push(...[192,186,190]);
-indexes.push(...[189,223,185]);
-indexes.push(...[224,227,226]);
-indexes.push(...[221,222,226]);
-indexes.push(...[222,205,225]);
-indexes.push(...[207,221,227]);
-indexes.push(...[106,117,108]);
-indexes.push(...[105,108,107]);
-indexes.push(...[112,106,105]);
-indexes.push(...[108,110,107]);
-indexes.push(...[107,152,150]);
-indexes.push(...[114,124,123]);
-indexes.push(...[111,117,113]);
-indexes.push(...[109,119,106]);
-indexes.push(...[114,113,117]);
-indexes.push(...[115,117,119]);
-indexes.push(...[121,119,116]);
-indexes.push(...[118,116,113]);
-indexes.push(...[124,127,123]);
-indexes.push(...[115,120,124]);
-indexes.push(...[118,123,122]);
-indexes.push(...[121,122,120]);
-indexes.push(...[128,129,132]);
-indexes.push(...[120,126,125]);
-indexes.push(...[124,125,128]);
-indexes.push(...[123,126,122]);
-indexes.push(...[131,136,135]);
-indexes.push(...[126,131,130]);
-indexes.push(...[127,132,131]);
-indexes.push(...[125,130,129]);
-indexes.push(...[136,139,135]);
-indexes.push(...[130,133,129]);
-indexes.push(...[132,133,136]);
-indexes.push(...[131,134,130]);
-indexes.push(...[140,146,145]);
-indexes.push(...[133,138,137]);
-indexes.push(...[136,137,140]);
-indexes.push(...[134,139,138]);
-indexes.push(...[141,143,144]);
-indexes.push(...[138,143,142]);
-indexes.push(...[139,144,143]);
-indexes.push(...[137,142,141]);
-indexes.push(...[145,148,147]);
-indexes.push(...[144,145,147]);
-indexes.push(...[141,146,137]);
-indexes.push(...[141,147,148]);
-indexes.push(...[151,193,195]);
-indexes.push(...[112,149,151]);
-indexes.push(...[150,154,107]);
-indexes.push(...[155,157,159]);
-indexes.push(...[150,155,156]);
-indexes.push(...[105,154,153]);
-indexes.push(...[149,153,155]);
-indexes.push(...[158,164,162]);
-indexes.push(...[156,159,160]);
-indexes.push(...[154,160,158]);
-indexes.push(...[153,158,157]);
-indexes.push(...[162,168,166]);
-indexes.push(...[158,161,157]);
-indexes.push(...[159,161,163]);
-indexes.push(...[160,163,164]);
-indexes.push(...[167,169,171]);
-indexes.push(...[161,166,165]);
-indexes.push(...[163,165,167]);
-indexes.push(...[164,167,168]);
-indexes.push(...[170,176,174]);
-indexes.push(...[167,172,168]);
-indexes.push(...[166,172,170]);
-indexes.push(...[165,170,169]);
-indexes.push(...[174,181,173]);
-indexes.push(...[169,174,173]);
-indexes.push(...[171,173,175]);
-indexes.push(...[172,175,176]);
-indexes.push(...[179,185,187]);
-indexes.push(...[175,177,179]);
-indexes.push(...[175,180,176]);
-indexes.push(...[174,180,178]);
-indexes.push(...[181,184,183]);
-indexes.push(...[177,181,183]);
-indexes.push(...[178,182,174]);
-indexes.push(...[180,187,188]);
-indexes.push(...[180,186,178]);
-indexes.push(...[190,191,192]);
-indexes.push(...[183,192,191]);
-indexes.push(...[194,200,198]);
-indexes.push(...[152,194,150]);
-indexes.push(...[149,194,193]);
-indexes.push(...[198,204,202]);
-indexes.push(...[193,198,197]);
-indexes.push(...[195,197,199]);
-indexes.push(...[197,202,201]);
-indexes.push(...[197,203,199]);
-indexes.push(...[207,217,219]);
-indexes.push(...[202,208,206]);
-indexes.push(...[205,209,211]);
-indexes.push(...[210,216,214]);
-indexes.push(...[206,210,202]);
-indexes.push(...[201,210,209]);
-indexes.push(...[206,211,212]);
-indexes.push(...[213,216,215]);
-indexes.push(...[212,215,216]);
-indexes.push(...[209,215,211]);
-indexes.push(...[209,214,213]);
-indexes.push(...[219,218,220]);
-indexes.push(...[208,218,206]);
-indexes.push(...[205,218,217]);
-indexes.push(...[222,201,205]);
-indexes.push(...[201,222,203]);
-indexes.push(...[203,221,207]);
-indexes.push(...[205,224,225]);
-indexes.push(...[183,185,177]);
-indexes.push(...[185,191,189]);
-indexes.push(...[186,188,223]);
-indexes.push(...[223,187,185]);
-indexes.push(...[186,223,178]);
-indexes.push(...[178,223,177]);
-indexes.push(...[186,184,178]);
-indexes.push(...[184,186,192]);
-indexes.push(...[186,223,190]);
-indexes.push(...[190,223,189]);
-indexes.push(...[224,226,225]);
-indexes.push(...[221,226,227]);
-indexes.push(...[222,225,226]);
-indexes.push(...[207,227,224]);
-
-
-
-  //Dodaj pozostałe trójkąty pudełka
-
-  return [indexes, vertexPosition, vertexNormal];
-}
-
-function startGL() 
-{
-  alert("StartGL");
-  let canvas = document.getElementById("canvas3D"); //wyszukanie obiektu w strukturze strony 
-  gl = canvas.getContext("experimental-webgl"); //pobranie kontekstu OpenGL'u z obiektu canvas
-  gl.viewportWidth = canvas.width; //przypisanie wybranej przez nas rozdzielczości do systemu OpenGL
-  gl.viewportHeight = canvas.height;
-  
-    //Kod shaderów
-  const vertextShaderSource = ` //Znak akcentu z przycisku tyldy - na lewo od przycisku 1 na klawiaturze
-    precision highp float;
-    attribute vec3 aVertexPosition; 
-    //attribute vec3 aVertexNormal;
-    uniform mat4 uMMatrix;
-    uniform mat4 uInvMMatrix;
-    uniform mat4 uVMatrix;
-    uniform mat4 uPMatrix;
-    varying vec3 vPos;
-    //varying vec3 vNormal;
-    uniform float uNormalMul;
-    void main(void) {
-      vPos = vec3(uMMatrix * vec4(aVertexPosition, 1.0));
-      gl_Position = uPMatrix * uVMatrix * vec4(vPos,1.0); //Dokonanie transformacji położenia punktów z przestrzeni 3D do przestrzeni obrazu (2D)
-      //vNormal = normalize(mat3(uInvMMatrix) * uNormalMul*aVertexNormal); //Obrot wektorow normalnych
-    }
-  `;
-  const fragmentShaderSource = `
-    precision highp float;
-    varying vec3 vPos;
-    //varying vec3 vNormal;
-    uniform sampler2D uSampler;
-    uniform vec3 uLightPosition;
-    uniform vec3 uColor;
-    void main(void) {
-       //vec3 lightDirection = normalize(uLightPosition - vPos);
-       //float brightness = max(dot(vNormal,lightDirection), 0.0);
-      //gl_FragColor = vec4(vColor,1.0); //Ustalenie stałego koloru wszystkich punktów sceny
-      //gl_FragColor = texture2D(uSampler,vTexUV)*vec4(vColor,1.0); //Odczytanie punktu tekstury i przypisanie go jako koloru danego punktu renderowaniej figury
-      //gl_FragColor = vec4((vNormal+vec3(1.0,1.0,1.0))/2.0,1.0); 
-      //gl_FragColor = clamp(texture2D(uSampler,vTexUV) * vec4(brightness,brightness,brightness,1.0),0.0,1.0);
-      //gl_FragColor = clamp(vec4(uColor,1.0) * vec4(brightness,brightness,brightness,1.0),0.0,1.0);
-      gl_FragColor = clamp(vec4(uColor,1.0),0.0,1.0);
-    }
-  `;
-  let fragmentShader = gl.createShader(gl.FRAGMENT_SHADER); //Stworzenie obiektu shadera 
-  let vertexShader   = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(fragmentShader, fragmentShaderSource); //Podpięcie źródła kodu shader
-  gl.shaderSource(vertexShader, vertextShaderSource);
-  gl.compileShader(fragmentShader); //Kompilacja kodu shader
-  gl.compileShader(vertexShader);
-  if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) { //Sprawdzenie ewentualnych błedów kompilacji
-    alert(gl.getShaderInfoLog(fragmentShader));
-    return null;
-  }
-  if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-    alert(gl.getShaderInfoLog(vertexShader));
-    return null;
+    //console.log(indexes);
+    //console.log(vertexPosition);
+    return [indexes, vertexPosition, vertexNormal];
   }
   
-  shaderProgram = gl.createProgram(); //Stworzenie obiektu programu 
-  gl.attachShader(shaderProgram, vertexShader); //Podpięcie obu shaderów do naszego programu wykonywanego na karcie graficznej
-  gl.attachShader(shaderProgram, fragmentShader);
-  gl.linkProgram(shaderProgram);
-  if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) alert("Could not initialise shaders");  //Sprawdzenie ewentualnych błedów
+  function CreateTetris()
+  {
+    //Opis sceny 3D, położenie punktów w przestrzeni 3D w formacie X,Y,Z 
+    let vertexPosition = []; //Każdy punkt 3 składowe - X1,Y1,Z1
+    let vertexNormal = [];
+    let indexes = [];
+   
+    return [indexes, vertexPosition, vertexNormal];
+  }
   
-  //Opis sceny 3D, położenie punktów w przestrzeni 3D w formacie X,Y,Z 
-  let vertexPosition; //3 punkty po 3 składowe - X1,Y1,Z1, X2,Y2,Z2, X3,Y3,Z3 - 1 trójkąt
-  let vertexNormal;
-  let indexes;
+  async function startGL() 
+  {
+    alert("StartGL");
+    let canvas = document.getElementById("canvas3D"); //wyszukanie obiektu w strukturze strony 
+    gl = canvas.getContext("experimental-webgl"); //pobranie kontekstu OpenGL'u z obiektu canvas
+    gl.viewportWidth = canvas.width; //przypisanie wybranej przez nas rozdzielczości do systemu OpenGL
+    gl.viewportHeight = canvas.height;
+    
+      //Kod shaderów
+    const vertextShaderSource = ` //Znak akcentu z przycisku tyldy - na lewo od przycisku 1 na klawiaturze
+      precision highp float;
+      attribute vec3 aVertexPosition; 
+      attribute vec3 aVertexNormal;
+      uniform mat4 uMMatrix;
+      uniform mat4 uInvMMatrix;
+      uniform mat4 uVMatrix;
+      uniform mat4 uPMatrix;
+      varying vec3 vPos;
+      varying vec3 vNormal;
+      uniform float uNormalMul;
+      void main(void) {
+        vPos = vec3(uMMatrix * vec4(aVertexPosition, 1.0));
+        gl_Position = uPMatrix * uVMatrix * vec4(vPos,1.0); //Dokonanie transformacji położenia punktów z przestrzeni 3D do przestrzeni obrazu (2D)
+        vNormal = normalize(mat3(uInvMMatrix) * uNormalMul*aVertexNormal); //Obrot wektorow normalnych
+      }
+    `;
+    const fragmentShaderSource = `
+      precision highp float;
+      varying vec3 vPos;
+      varying vec3 vNormal;
+      uniform sampler2D uSampler;
+      uniform vec3 uLightPosition;
+      uniform vec3 uColor;
+      void main(void) {
+        vec3 lightDirection = normalize(uLightPosition - vPos);
+        float brightness = max(dot(vNormal,lightDirection), 0.0);
+        //gl_FragColor = vec4(vColor,1.0); //Ustalenie stałego koloru wszystkich punktów sceny
+        //gl_FragColor = texture2D(uSampler,vTexUV)*vec4(vColor,1.0); //Odczytanie punktu tekstury i przypisanie go jako koloru danego punktu renderowaniej figury
+        //gl_FragColor = vec4((vNormal+vec3(1.0,1.0,1.0))/2.0,1.0); 
+        //gl_FragColor = clamp(texture2D(uSampler,vTexUV) * vec4(brightness,brightness,brightness,1.0),0.0,1.0);
+        gl_FragColor = clamp(vec4(uColor,1.0) * vec4(brightness,brightness,brightness,1.0),0.0,1.0);
+        //gl_FragColor = clamp(vec4(uColor,1.0) ,0.0,1.0);
+      }
+    `;
+    let fragmentShader = gl.createShader(gl.FRAGMENT_SHADER); //Stworzenie obiektu shadera 
+    let vertexShader   = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(fragmentShader, fragmentShaderSource); //Podpięcie źródła kodu shader
+    gl.shaderSource(vertexShader, vertextShaderSource);
+    gl.compileShader(fragmentShader); //Kompilacja kodu shader
+    gl.compileShader(vertexShader);
+    if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) { //Sprawdzenie ewentualnych błedów kompilacji
+      alert(gl.getShaderInfoLog(fragmentShader));
+      return null;
+    }
+    if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+      alert(gl.getShaderInfoLog(vertexShader));
+      return null;
+    }
+    
+    shaderProgram = gl.createProgram(); //Stworzenie obiektu programu 
+    gl.attachShader(shaderProgram, vertexShader); //Podpięcie obu shaderów do naszego programu wykonywanego na karcie graficznej
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) alert("Could not initialise shaders");  //Sprawdzenie ewentualnych błedów
+    
+    //Opis sceny 3D, położenie punktów w przestrzeni 3D w formacie X,Y,Z 
+    let vertexPosition; //3 punkty po 3 składowe - X1,Y1,Z1, X2,Y2,Z2, X3,Y3,Z3 - 1 trójkąt
+    let vertexNormal;
+    let indexes;
   
-  //[vertexPosition, vertexColor, vertexCoords, vertexNormal] = CreateShpere(0,0,0,2, 6, 12); 
-  [indexes, vertexPosition, vertexNormal] = CreateBox(0,0,0,1,1,1);
+    [indexes, vertexPosition, vertexNormal] = await LoadObj('ludzik.obj');
+    
+    vertexPositionBuffer = gl.createBuffer(); //Stworzenie tablicy w pamieci karty graficznej
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPosition), gl.STATIC_DRAW);
+    vertexPositionBuffer.itemSize = 3; //zdefiniowanie liczby współrzednych per wierzchołek
+    vertexPositionBuffer.numItems = vertexPosition.length/9; //Zdefinoiowanie liczby trójkątów w naszym buforze
+    
+    vertexNormalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormal), gl.STATIC_DRAW);
+    vertexNormalBuffer.itemSize = 3;
+    vertexNormalBuffer.numItems = vertexNormal.length/9;
+    
+    indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexes), gl.STATIC_DRAW);
+    indexBuffer.numItems = indexes.length;
   
-  vertexPositionBuffer = gl.createBuffer(); //Stworzenie tablicy w pamieci karty graficznej
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPosition), gl.STATIC_DRAW);
-  vertexPositionBuffer.itemSize = 3; //zdefiniowanie liczby współrzednych per wierzchołek
-  vertexPositionBuffer.numItems = vertexPosition.length/9; //Zdefinoiowanie liczby trójkątów w naszym buforze
+    //Macierze opisujące położenie wirtualnej kamery w przestrzenie 3D
+    let aspect = gl.viewportWidth/gl.viewportHeight;
+    let fov = 45.0 * Math.PI / 180.0; //Określenie pola widzenia kamery
+    let zFar = 100.0; //Ustalenie zakresów renderowania sceny 3D (od obiektu najbliższego zNear do najdalszego zFar)
+    let zNear = 0.1;
+    uPMatrix = [
+     1.0/(aspect*Math.tan(fov/2)),0                           ,0                         ,0                            ,
+     0                         ,1.0/(Math.tan(fov/2))         ,0                         ,0                            ,
+     0                         ,0                           ,-(zFar+zNear)/(zFar-zNear)  , -1,
+     0                         ,0                           ,-(2*zFar*zNear)/(zFar-zNear) ,0.0,
+    ];
+    Tick();
+  } 
+  //let angle = 45.0; //Macierz transformacji świata - określenie położenia kamery 
   
-  vertexNormalBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormal), gl.STATIC_DRAW);
-  vertexNormalBuffer.itemSize = 3;
-  vertexNormalBuffer.numItems = vertexNormal.length/9;
+  var angleZ = 0.0;
+  var angleY =  180.0;
+  var angleX = 0.0;
+  var KameraPositionZ = -3.0;
   
-  indexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexes), gl.STATIC_DRAW);
-  indexBuffer.numItems = indexes.length;
-
-  //Macierze opisujące położenie wirtualnej kamery w przestrzenie 3D
-  let aspect = gl.viewportWidth/gl.viewportHeight;
-  let fov = 45.0 * Math.PI / 180.0; //Określenie pola widzenia kamery
-  let zFar = 100.0; //Ustalenie zakresów renderowania sceny 3D (od obiektu najbliższego zNear do najdalszego zFar)
-  let zNear = 0.1;
-  uPMatrix = [
-   1.0/(aspect*Math.tan(fov/2)),0                           ,0                         ,0                            ,
-   0                         ,1.0/(Math.tan(fov/2))         ,0                         ,0                            ,
-   0                         ,0                           ,-(zFar+zNear)/(zFar-zNear)  , -1,
-   0                         ,0                           ,-(2*zFar*zNear)/(zFar-zNear) ,0.0,
-  ];
-  Tick();
-} 
-//let angle = 45.0; //Macierz transformacji świata - określenie położenia kamery 
-
-var angleZ = 0.0;
-var angleY = 0.0;
-var angleX = 0.0;
-var KameraPositionZ = -8.0;
-
-var Object1PositionX = 0.0;
-var Object1PositionY = 0.0;
-var Object1PositionZ = 0.0;
-
-var Object1AngleZ = 0.0;
-
-var Object2PositionX = 1.0;
-var Object2PositionY = 0.0;
-var Object2PositionZ = 0.0;
-
-var Object2AngleZ = 0.0;
-
-var Object3PositionX = 1.0;
-var Object3PositionY = 0.0;
-var Object3PositionZ = 0.0;
-
-var Object3AngleZ = 0.0;
-
-var LightSize = 0.1;
-var Object1Sizedx = 1.0;
-var Object1Sizedy = 0.2;
-var Object1Sizedz = 0.1;
-var Object2Sizedx = 1.0;
-var Object2Sizedy = 0.2;
-var Object2Sizedz = 0.1;
-var Object3Sizedx = 0.4;
-var Object3Sizedy = 0.2;
-var Object3Sizedz = 0.1;
-
-var LightPositionX = 0;
-var LightPositionY = 0;
-var LightPositionZ = 3;
-
-
-function Tick()
-{ 
-  let uMMatrix0 = CreateIdentytyMatrix(); 
-  let uMMatrix1 = CreateIdentytyMatrix();
-  let uMMatrix2 = CreateIdentytyMatrix();
-  let uMMatrix3 = CreateIdentytyMatrix();
+  var Object1PositionX = 0.0;
+  var Object1PositionY = -2.0;
+  var Object1PositionZ = 4.0;
   
-  let uVMatrix = CreateIdentytyMatrix();
+  var Object1AngleZ = 0.0;
   
+  var LightSize = 0.1;
+  var Object1Sizedx = 0.4;
+  var Object1Sizedy = 0.4;
+  var Object1Sizedz = 0.4;
   
-  uVMatrix = MatrixMul(uVMatrix,CreateRotationXMatrix(angleX));
-  uVMatrix = MatrixMul(uVMatrix,CreateRotationYMatrix(angleY));
-  uVMatrix = MatrixMul(uVMatrix,CreateRotationZMatrix(angleZ));
-  uVMatrix = MatrixMul(uVMatrix,CreateTranslationMatrix(0,0,KameraPositionZ));
-  
-  uMMatrix1 = MatrixMul(uMMatrix1,CreateScaleMatrix(Object1Sizedx,Object1Sizedy,Object1Sizedz));
-  uMMatrix1 = MatrixMul(uMMatrix1,CreateTranslationMatrix(Object1Sizedx,0.0,0.0)); 
-  uMMatrix1 = MatrixMul(uMMatrix1,CreateRotationZMatrix(Object1AngleZ));
-  uMMatrix1 = MatrixMul(uMMatrix1,CreateTranslationMatrix(Object1PositionX,Object1PositionY,Object1PositionZ));  
-  
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateScaleMatrix(Object2Sizedx,Object2Sizedy,Object2Sizedz));
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateTranslationMatrix(Object2Sizedx,0.0,0.0)); 
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateRotationZMatrix(Object2AngleZ));
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateTranslationMatrix(Object2PositionX,Object2PositionY,Object2PositionZ));
-  
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateTranslationMatrix(Object1Sizedx,0.0,0.0)); 
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateRotationZMatrix(Object1AngleZ));
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateTranslationMatrix(Object1PositionX,Object1PositionY,Object1PositionZ));
-  
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateScaleMatrix(Object3Sizedx,Object3Sizedy,Object3Sizedz));
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object3Sizedx,0.0,0.0)); 
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateRotationZMatrix(Object3AngleZ));
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object3PositionX,Object3PositionY,Object3PositionZ));
-  
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object2Sizedx,0.0,0.0)); 
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateRotationZMatrix(Object2AngleZ));
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object2PositionX,Object2PositionY,Object2PositionZ));
-  
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object1Sizedx,0.0,0.0)); 
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateRotationZMatrix(Object1AngleZ));
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object1PositionX,Object1PositionY,Object1PositionZ));
-  
-  uMMatrix0 = MatrixMul(uMMatrix0,CreateScaleMatrix(LightSize,LightSize,LightSize));
-  uMMatrix0 = MatrixMul(uMMatrix0,CreateTranslationMatrix(LightPositionX,LightPositionY,LightPositionZ));
-  
-  //alert(uPMatrix);
-  
-  //Render Scene
-  gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight); 
-  gl.clearColor(1.0,0.0,0.0,1.0); //Wyczyszczenie obrazu kolorem czerwonym
-  gl.clearDepth(1.0);             //Wyczyścienie bufora głebi najdalszym planem
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.useProgram(shaderProgram)   //Użycie przygotowanego programu shaderowego
-  
-  gl.enable(gl.DEPTH_TEST);           // Włączenie testu głębi - obiekty bliższe mają przykrywać obiekty dalsze
-  gl.depthFunc(gl.LEQUAL);            // 
-  
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uPMatrix"), false, new Float32Array(uPMatrix)); //Wgranie macierzy kamery do pamięci karty graficznej
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uVMatrix"), false, new Float32Array(uVMatrix));
-  gl.uniform1f(gl.getUniformLocation(shaderProgram, "uNormalMul"),1.0);
-  gl.uniform3f(gl.getUniformLocation(shaderProgram, "uLightPosition"),LightPositionX,LightPositionY,LightPositionZ);
-  
-  gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexPosition"));  //Przekazanie położenia
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
-  gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aVertexPosition"), vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-  
-  //gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexNormal"));  //Przekazywanie wektorów normalnych
-  //gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
-  //gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aVertexNormal"), vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
-  
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  var LightPositionX = 0;
+  var LightPositionY = 0;
+  var LightPositionZ = 0;
   
   
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uMMatrix"), false, new Float32Array(uMMatrix1));
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uInvMMatrix"), false, new Float32Array(MatrixTransposeInverse(uMMatrix1)));
-  gl.uniform3f(gl.getUniformLocation(shaderProgram, "uColor"),0.5,0.0,0.0);  
-  //gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
-  gl.drawElements(gl.TRIANGLES, indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-  
-  //Drugi Obiekt
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uMMatrix"), false, new Float32Array(uMMatrix2));
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uInvMMatrix"), false, new Float32Array(MatrixTransposeInverse(uMMatrix2)));
-  gl.uniform3f(gl.getUniformLocation(shaderProgram, "uColor"),0.0,1.0,0.0);
-  //gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
-  gl.drawElements(gl.TRIANGLES, indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-  
-  //Trzeci Obiekt
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uMMatrix"), false, new Float32Array(uMMatrix3));
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uInvMMatrix"), false, new Float32Array(MatrixTransposeInverse(uMMatrix3)));
-  gl.uniform3f(gl.getUniformLocation(shaderProgram, "uColor"),0.0,0.0,1.0);
-  //gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
-  gl.drawElements(gl.TRIANGLES, indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-  
-  //Obiekt Światła
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uMMatrix"), false, new Float32Array(uMMatrix0));
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uInvMMatrix"), false, new Float32Array(MatrixTransposeInverse(uMMatrix0)));
-  gl.uniform3f(gl.getUniformLocation(shaderProgram, "uColor"),1.0,1.0,0.0);
-  gl.uniform1f(gl.getUniformLocation(shaderProgram, "uNormalMul"),-1.0);  
-  //gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
-  gl.drawElements(gl.TRIANGLES, indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-  
-  setTimeout(Tick,100);
-}
-function handlekeydown(e)
-{
- // Q W E A S D
- if(e.keyCode==87) angleX=angleX+1.0; //W
- if(e.keyCode==83) angleX=angleX-1.0; //S
- if(e.keyCode==68) angleY=angleY+1.0;
- if(e.keyCode==65) angleY=angleY-1.0;
- if(e.keyCode==81) angleZ=angleZ+1.0;
- if(e.keyCode==69) angleZ=angleZ-1.0;
- //alert(e.keyCode);
- //alert(angleX);
- 
- //U I O J K L
- if(e.keyCode==76) LightPositionX=LightPositionX+0.1;
- if(e.keyCode==74) LightPositionX=LightPositionX-0.1;
- if(e.keyCode==73) LightPositionY=LightPositionY+0.1;
- if(e.keyCode==75) LightPositionY=LightPositionY-0.1;
- if(e.keyCode==85) LightPositionZ=LightPositionZ+0.1;
- if(e.keyCode==79) LightPositionZ=LightPositionZ-0.1;
- 
- //Z X
- if(e.keyCode==88) Object1AngleZ=Object1AngleZ-0.1;
- if(e.keyCode==90) Object1AngleZ=Object1AngleZ+0.1;
- 
- //C V
- if(e.keyCode==67) Object2AngleZ=Object2AngleZ-0.1;
- if(e.keyCode==86) Object2AngleZ=Object2AngleZ+0.1;
- 
- //B N
- if(e.keyCode==66) Object3AngleZ=Object3AngleZ-0.1;
- if(e.keyCode==78) Object3AngleZ=Object3AngleZ+0.1;
-}
-</script>
-</head>
-<body onload="startGL()" onkeydown="handlekeydown(event)">
-<canvas id="canvas3D" width="640" height="480" style="border: solid black 1px"></canvas>
-</body>
-</html>
+  function Tick()
+  { 
+    let uMMatrix0 = CreateIdentytyMatrix(); 
+    let uMMatrix1 = CreateIdentytyMatrix();
+    
+    let uVMatrix = CreateIdentytyMatrix();
+    
+    
+    uVMatrix = MatrixMul(uVMatrix,CreateRotationXMatrix(angleX));
+    uVMatrix = MatrixMul(uVMatrix,CreateRotationYMatrix(angleY));
+    uVMatrix = MatrixMul(uVMatrix,CreateRotationZMatrix(angleZ));
+    uVMatrix = MatrixMul(uVMatrix,CreateTranslationMatrix(0,0,KameraPositionZ));
+    
+    uMMatrix1 = MatrixMul(uMMatrix1,CreateScaleMatrix(Object1Sizedx,Object1Sizedy,Object1Sizedz));
+    uMMatrix1 = MatrixMul(uMMatrix1,CreateTranslationMatrix(Object1Sizedx,0.0,0.0)); 
+    uMMatrix1 = MatrixMul(uMMatrix1,CreateRotationZMatrix(Object1AngleZ));
+    uMMatrix1 = MatrixMul(uMMatrix1,CreateTranslationMatrix(Object1PositionX,Object1PositionY,Object1PositionZ));  
+    
+    uMMatrix0 = MatrixMul(uMMatrix0,CreateScaleMatrix(LightSize,LightSize,LightSize));
+    uMMatrix0 = MatrixMul(uMMatrix0,CreateTranslationMatrix(LightPositionX,LightPositionY,LightPositionZ));
+    
+    //alert(uPMatrix);
+    
+    //Render Scene
+    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight); 
+    gl.clearColor(1.0,1.0,1.0,1.0); //Wyczyszczenie obrazu kolorem czerwonym
+    gl.clearDepth(1.0);             //Wyczyścienie bufora głebi najdalszym planem
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(shaderProgram)   //Użycie przygotowanego programu shaderowego
+    
+    gl.enable(gl.DEPTH_TEST);           // Włączenie testu głębi - obiekty bliższe mają przykrywać obiekty dalsze
+    gl.depthFunc(gl.LEQUAL);            // 
+    
+    gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uPMatrix"), false, new Float32Array(uPMatrix)); //Wgranie macierzy kamery do pamięci karty graficznej
+    gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uVMatrix"), false, new Float32Array(uVMatrix));
+    gl.uniform1f(gl.getUniformLocation(shaderProgram, "uNormalMul"),1.0);
+    gl.uniform3f(gl.getUniformLocation(shaderProgram, "uLightPosition"),LightPositionX,LightPositionY,LightPositionZ);
+    
+    gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexPosition"));  //Przekazanie położenia
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+    gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aVertexPosition"), vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    
+    gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexNormal"));  //Przekazywanie wektorów normalnych
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
+    gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aVertexNormal"), vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    
+    //Pierwszy Obiekt
+    gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uMMatrix"), false, new Float32Array(uMMatrix1));
+    gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uInvMMatrix"), false, new Float32Array(MatrixTransposeInverse(uMMatrix1)));
+    gl.uniform3f(gl.getUniformLocation(shaderProgram, "uColor"),1.0,0.0,0.0);  
+    //gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
+    gl.drawElements(gl.TRIANGLES, indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+    
+    /*
+    //Obiekt Światła
+    gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uMMatrix"), false, new Float32Array(uMMatrix0));
+    gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uInvMMatrix"), false, new Float32Array(MatrixTransposeInverse(uMMatrix0)));
+    gl.uniform3f(gl.getUniformLocation(shaderProgram, "uColor"),1.0,1.0,0.0);
+    gl.uniform1f(gl.getUniformLocation(shaderProgram, "uNormalMul"),-1.0);  
+    //gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
+    gl.drawElements(gl.TRIANGLES, indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+    */
+    
+    setTimeout(Tick,100);
+  }
+  function handlekeydown(e)
+  {
+   // Q W E A S D
+   if(e.keyCode==87) angleX=angleX+1.0; //W
+   if(e.keyCode==83) angleX=angleX-1.0; //S
+   if(e.keyCode==68) angleY=angleY+1.0;
+   if(e.keyCode==65) angleY=angleY-1.0;
+   if(e.keyCode==81) angleZ=angleZ+1.0;
+   if(e.keyCode==69) angleZ=angleZ-1.0;
+   //alert(e.keyCode);
+   //alert(angleX);
+   
+   //U I O J K L
+   if(e.keyCode==76) LightPositionX=LightPositionX+0.1;
+   if(e.keyCode==74) LightPositionX=LightPositionX-0.1;
+   if(e.keyCode==73) LightPositionY=LightPositionY+0.1;
+   if(e.keyCode==75) LightPositionY=LightPositionY-0.1;
+   if(e.keyCode==85) LightPositionZ=LightPositionZ+0.1;
+   if(e.keyCode==79) LightPositionZ=LightPositionZ-0.1;
+   
+   //Z X
+   if(e.keyCode==88) Object1AngleZ=Object1AngleZ-0.1;
+   if(e.keyCode==90) Object1AngleZ=Object1AngleZ+0.1;
+   
+   //C V
+   if(e.keyCode==67) Object2AngleZ=Object2AngleZ-0.1;
+   if(e.keyCode==86) Object2AngleZ=Object2AngleZ+0.1;
+   
+   //B N
+   if(e.keyCode==66) Object3AngleZ=Object3AngleZ-0.1;
+   if(e.keyCode==78) Object3AngleZ=Object3AngleZ+0.1;
+  }
+  </script>
+  </head>
+  <body onload="startGL()" onkeydown="handlekeydown(event)">
+  <canvas id="canvas3D" width="640" height="480" style="border: solid black 1px"></canvas>
+  </body>
+  </html>
